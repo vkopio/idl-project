@@ -16,3 +16,13 @@ Then install the dependencies with
     pipenv --python 3.8
     pipenv shell
     pipenv install --dev
+
+## Run
+
+To run the project, make sure to have the virtual environment activated with
+
+    pipenv shell
+
+and run normally
+
+    python src/main.py
