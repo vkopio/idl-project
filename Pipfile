@@ -9,6 +9,7 @@ torch = "*"
 torchvision = "*"
 torchaudio = "*"
 matplotlib = "*"
+natsort = "*"
 
 [dev-packages]
 pylint = "*"
