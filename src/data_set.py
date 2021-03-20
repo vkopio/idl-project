@@ -1,6 +1,7 @@
 import os
 import natsort
 from PIL import Image
+from torch import FloatTensor
 from torch.utils.data import Dataset
 
 from data_process import get_labels
@@ -21,5 +22,5 @@ class ImageDataSet(Dataset):
         img_loc = os.path.join(self.main_dir, self.total_imgs[idx])
         image = Image.open(img_loc).convert("RGB")
         tensor_image = self.transform(image)
-        target = labels[idx]
+        target = FloatTensor(labels[idx])
         return tensor_image, target
