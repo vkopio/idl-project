@@ -1,3 +1,8 @@
+"""
+Inspiration for the custom DataSet is drawn from:
+https://discuss.pytorch.org/t/how-to-load-images-without-using-imagefolder/59999/3
+"""
+
 import os
 import natsort
 from PIL import Image
@@ -7,6 +12,7 @@ from torch.utils.data import Dataset
 from data_process import get_labels
 
 labels = get_labels()
+
 
 class ImageDataSet(Dataset):
     def __init__(self, main_dir, transform):
