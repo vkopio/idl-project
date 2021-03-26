@@ -3,48 +3,54 @@ from pathlib import Path
 from PIL import Image
 import torch
 import torchvision
-import matplotlib.pyplot as plt
+from torchvision import transforms
 from torchvision.transforms import functional as F
+from itertools import compress
 
 # Import model
 from model import CNN
-
 
 # Define paths
 weights_path = "trained_weights.pt" # Path to trained model weights
 read_dir = Path("../data/predict_images") # Directory to predict
 
+# Labels list for printing
+labels_list = ["baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
 
-# Prediction main function
-def predict(model, img_path, device):
-    # Image to device
-    img = img.to(device)
-    # Make prediction
-    for p in model.parameters():
-        p.requires_grad = False
-    # Set model to eval mode
-    model.eval()
-    # make prediction
-    prediction = model(test_img)
-    # Empty cuda caches. May be useless.
-    torch.cuda.empty_cache()
-    # Prediction detach
-    if device.type == "cpu":
-        prediction = prediction.detach().numpy()
-    else:
-        prediction = prediction.cpu().detach().numpy()
-    # Get image name
-    img_name = img_path.parts[-1]
-    # Print result
-    print(img_name)
-    print(prediction)
+# Number of output classes
+CLASS_COUNT = 14
+
+# Image normalization
+class Normalize(object):
+    """Normalize a tensor image with mean and standard deviation.
+    Given mean: ``(M1,...,Mn)`` and std: ``(S1,..,Sn)`` for ``n`` channels, this transform
+    will normalize each channel of the input ``torch.*Tensor`` i.e.
+    ``input[channel] = (input[channel] - mean[channel]) / std[channel]``
+    Args:
+        mean (sequence): Sequence of means for each channel.
+        std (sequence): Sequence of standard deviations for each channel.
+    """
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, tensor):
+        """
+        Args:
+            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        Returns:
+            Tensor: Normalized Tensor image.
+        """
+        return F.normalize(tensor, self.mean, self.std)
 
 # The main
 if __name__ == "__main__":
     # If available, use GPU, otherwise use CPU
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # Model to device
-    model = CNN.to(device)
+    model = CNN(CLASS_COUNT).to(device)
+
     # Load trained model weights
     if device.type == "cpu":
         print("No Cuda available, will use CPU")
@@ -54,8 +60,34 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(weights_path))
 
     # Get image paths
-    img_paths = read_dir.glob("*.jpg")
+    img_paths = list(read_dir.glob("*.jpg"))
+    img_paths = sorted(img_paths)
 
-    # Loop image paths and make predictions
-    for img_path in img_paths:
-        predict(model, img_path, device)
+    # Loop images and make predictions
+    for im_path in img_paths:
+        # Image name for printing
+        im_name = im_path.parts[-1]
+
+        # Read image
+        im = Image.open(im_path).convert("RGB") 
+        im = torchvision.transforms.ToTensor()(im)
+
+        # Normalize image
+        normalize = Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        im = normalize(im)
+
+        # Make prediction
+        model.eval()
+        with torch.no_grad():
+            im = im.unsqueeze(0)
+            prediction = model(im)
+
+        # Prediction tensor to list
+        prediction = prediction.numpy()[0]
+
+        # Print results with values
+        print(im_name, ":", prediction)
+
+        # Print result with names
+        labeled_prediction = list(compress(labels_list, prediction))
+        print(im_name, ":", labeled_prediction)
