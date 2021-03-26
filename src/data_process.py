@@ -3,7 +3,7 @@ import os
 
 
 def get_labels():
-    path = 'data/annotations'
+    path = '../data/annotations'
     labels = []
     label_files = glob.glob(os.path.join(path, '*.txt'))
     label_files.sort()
