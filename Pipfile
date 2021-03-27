@@ -10,6 +10,13 @@ torchvision = "*"
 torchaudio = "*"
 matplotlib = "*"
 natsort = "*"
+sklearn = "*"
+seaborn = "*"
+scikit-multilearn = "*"
+pandas = "*"
+arff = "*"
+requests = "*"
+iterative-stratification = "*"
 
 [dev-packages]
 pylint = "*"

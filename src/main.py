@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.utils.data as data
 from torchvision import transforms
 
-from data_set import ImageDataSet
+from data_set import train_set, val_set, test_set
 from model import CNN
 
 # MacOs requires these two lines
@@ -27,15 +27,6 @@ model = CNN(CLASS_COUNT).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 loss_function = nn.BCELoss()
 
-transformers = [
-    #transforms.Grayscale(num_output_channels=1),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=0.5, std=0.5, inplace=True),
-]
-
-data_set = ImageDataSet('../data/images', transforms.Compose(transformers))
-train_set, val_set, test_set = data.random_split(data_set, [15000, 2500, 2500], generator=torch.Generator().manual_seed(RANDOM_SEED))
-
 train_loader = data.DataLoader(
     train_set,
     batch_size=BATCH_SIZE,
@@ -51,7 +42,7 @@ val_loader = data.DataLoader(
 )
 
 test_loader = data.DataLoader(
-    val_set,
+    test_set,
     batch_size=BATCH_SIZE,
     shuffle=False,
     num_workers=NUM_WORKERS,
