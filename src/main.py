@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.utils.data as data
 from torchvision import transforms
 
-from data_set import ImageDataSet
+#from data_set import ImageDataSet
+from data_set import train_set, val_set, test_set
 from model import CNN
 
 # MacOs requires these two lines
@@ -12,30 +13,22 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 CLASS_COUNT = 14
-EPOCH_COUNT = 2
+EPOCH_COUNT = 1
 BATCH_SIZE = 100
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.01
 NUM_WORKERS = 10
 RANDOM_SEED = 42
 
-# Define paths
-weights_dir = "trained_weights.pt"
+# Define path to trained model
 model_dir = "trained_model.pth"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = CNN(CLASS_COUNT).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 loss_function = nn.BCELoss()
+#loss_function = nn.BCEWithLogitsLoss()
 
-transformers = [
-    #transforms.Grayscale(num_output_channels=1),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=0.5, std=0.5, inplace=True),
-]
-
-data_set = ImageDataSet('../data/images', transforms.Compose(transformers))
-train_set, val_set, test_set = data.random_split(data_set, [15000, 2500, 2500], generator=torch.Generator().manual_seed(RANDOM_SEED))
-
+# Train, val and test loaders
 train_loader = data.DataLoader(
     train_set,
     batch_size=BATCH_SIZE,
@@ -51,11 +44,17 @@ val_loader = data.DataLoader(
 )
 
 test_loader = data.DataLoader(
-    val_set,
+    test_set,
     batch_size=BATCH_SIZE,
     shuffle=False,
     num_workers=NUM_WORKERS,
 )
+
+def init_weights(m):
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        torch.nn.init.constant_(m.weight, 1)
 
 def prediction_accuracy(original, predicted):
     return torch.round(predicted).eq(original).sum().numpy() / len(original)
@@ -86,18 +85,20 @@ def evaluate(model, iterator, criterion):
 
 def load_trained_model():
     # Load model
+    checkpoint = torch.load(model_dir)
+    '''
     if device.type == "cpu":
         print("No Cuda available, load pretrained model to CPU")
-        #model.load_state_dict(torch.load(model_dir, map_location="cpu"))
-        checkpoint = torch.load(model_dir)
+        #optimizer.load_state_dict(checkpoint['optimizer'], map_location='cpu')
+        #model.load_state_dict(checkpoint['state_dict'], map_location='cpu')
         optimizer.load_state_dict(checkpoint['optimizer'])
         model.load_state_dict(checkpoint['state_dict'])
     else:
         print("Load trained model to Cuda GPU")
-        checkpoint = torch.load(model_dir)
-        optimizer.load_state_dict(checkpoint['optimizer'], map_location="cpu")
-        model.load_state_dict(checkpoint['state_dict'], map_location="cpu")
-    # Get validation accuracy and loss
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        model.load_state_dict(checkpoint['state_dict'])
+    '''
+    # Get starting validation accuracy and loss
     valid_loss, valid_acc = evaluate(model, val_loader, loss_function)
     validation_loss = np.asarray(valid_loss).mean()
     print('Starting results | validation acc %.4f, loss %.4f ' %
@@ -105,9 +106,17 @@ def load_trained_model():
                validation_loss))
     return validation_loss
 
-def train():
-    # Initialize valiadation accuracy
+def train(model):
+    #model = CNN(CLASS_COUNT).to(device)
+    #optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    # Load empty model with init weights. 
+    # Use if you want to start training from beginning, and then comment load_trained_model().
+    model = model.apply(init_weights)
+    best_valid_loss = 100
+
+    # Load trained model and init valiadation accuracy
     best_valid_loss = load_trained_model()
+    
 
     for epoch_index in range(EPOCH_COUNT):
         total = len(train_loader.dataset)
@@ -157,12 +166,11 @@ def train():
             test_loss, test_acc = evaluate(model, test_loader, loss_function)
             print("New best result | Test accuracy: %.4f | Test loss %.4f" %
                 (np.asarray(test_acc).mean(), np.asarray(test_loss).mean()))
-            # Save weights used in prediction
-            torch.save(model.state_dict(), weights_dir)
-            # Save model and weights used in further training
+            # Save model and weights used in further training and prediction
             state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             torch.save(state, model_dir)
+            print("New best model saved!")
 
 if __name__ == '__main__':
-    train()
+    train(model)
     print("ok")
