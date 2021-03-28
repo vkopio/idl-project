@@ -11,7 +11,8 @@ from itertools import compress
 from model import CNN
 
 # Define paths
-weights_path = "trained_weights.pt" # Path to trained model weights
+#weights_path = "trained_weights.pt" # Path to trained model weights
+model_dir = "trained_model.pth"
 read_dir = Path("../data/predict_images") # Directory to predict
 
 # Labels list for printing
@@ -50,7 +51,7 @@ if __name__ == "__main__":
 
     # Model to device
     model = CNN(CLASS_COUNT).to(device)
-
+    '''
     # Load trained model weights
     if device.type == "cpu":
         print("No Cuda available, will use CPU")
@@ -58,6 +59,17 @@ if __name__ == "__main__":
     else:
         print("Use Cuda GPU")
         model.load_state_dict(torch.load(weights_path))
+    '''
+    # Load trained model weights
+    if device.type == "cpu":
+        print("No Cuda available, will use CPU")
+        checkpoint = torch.load(model_dir)
+        #model.load_state_dict(checkpoint['state_dict'], map_location="cpu")
+        model.load_state_dict(checkpoint['state_dict'])
+    else:
+        print("Use Cuda GPU")
+        checkpoint = torch.load(model_dir)
+        model.load_state_dict(checkpoint['state_dict'])
 
     # Get image paths
     img_paths = list(read_dir.glob("*.jpg"))
@@ -82,6 +94,10 @@ if __name__ == "__main__":
             im = im.unsqueeze(0)
             prediction = model(im)
 
+        # Binarize prediction. NOT DONE YET!!
+
+
+
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
 
@@ -91,3 +107,17 @@ if __name__ == "__main__":
         # Print result with names
         labeled_prediction = list(compress(labels_list, prediction))
         print(im_name, ":", labeled_prediction)
+
+        '''
+        Correct answers for im1-im9
+        im_num,count,baby,bird,car,clouds,dog,female,flower,male,night,people,portrait,river,sea,tree
+        im1, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0
+        im2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        im3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        im4, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0
+        im5, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0
+        im6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        im7, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0
+        im8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        im9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        '''
