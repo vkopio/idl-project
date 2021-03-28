@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # Load trained model weights
     if device.type == "cpu":
         print("No Cuda available, will use CPU")
-        checkpoint = torch.load(model_dir)
+        checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
         #model.load_state_dict(checkpoint['state_dict'], map_location="cpu")
         model.load_state_dict(checkpoint['state_dict'])
     else:
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         print(im_name, ":", prediction)
 
         # Binarize prediction. Threshold needs tuning!
-        threshold = 0.15
+        threshold = 0.155
         prediction[prediction < threshold] = 0
         prediction[prediction >= threshold] = 1
 
@@ -113,13 +113,13 @@ if __name__ == "__main__":
         '''
         Correct answers for im1-im9
         im_num,count,baby,bird,car,clouds,dog,female,flower,male,night,people,portrait,river,sea,tree
-        im1, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0
-        im2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        im3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        im4, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0
-        im5, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0
-        im6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        im7, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0
-        im8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        im9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        im1,     3,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      1,      0,   0,  0
+        im2,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
+        im3,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
+        im4,     2,   0,    0,  0,   0,    0,   0,     0,    1,    0,    1,      0,      0,   0,  0
+        im5,     2,   0,    0,  0,   0,    0,   0,     0,    1,    0,    1,      0,      0,   0,  0
+        im6,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
+        im7,     2,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      0,      0,   0,  0
+        im8,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
+        im9,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
         '''
