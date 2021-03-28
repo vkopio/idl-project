@@ -94,15 +94,17 @@ if __name__ == "__main__":
             im = im.unsqueeze(0)
             prediction = model(im)
 
-        # Binarize prediction. NOT DONE YET!!
-
-
 
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
 
         # Print results with values
         print(im_name, ":", prediction)
+
+        # Binarize prediction. Threshold needs tuning!
+        threshold = 0.15
+        prediction[prediction < threshold] = 0
+        prediction[prediction >= threshold] = 1
 
         # Print result with names
         labeled_prediction = list(compress(labels_list, prediction))
