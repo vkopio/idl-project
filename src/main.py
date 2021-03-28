@@ -13,21 +13,21 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 CLASS_COUNT = 14
-EPOCH_COUNT = 2
-BATCH_SIZE = 32
-LEARNING_RATE = 0.001
+EPOCH_COUNT = 1
+BATCH_SIZE = 16
+LEARNING_RATE = 0.01
 NUM_WORKERS = 10
 RANDOM_SEED = 42
 
 # Start training from beginning or continue with the trained model. True or False.
-start_beginning=True
+start_beginning=False
 
 # Define path to trained model
 model_dir = "trained_model.pth"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = CNN(CLASS_COUNT).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=5e-5)
 loss_function = nn.BCELoss()
 
 # Train, val and test loaders
@@ -86,18 +86,19 @@ def evaluate(model, iterator, criterion):
 def initialize_model(model, model_dir, device, start_beginning):
     # Initialize model weights
     model = model.apply(init_weights)
-
     # Load trained model
     if start_beginning == False:
-        checkpoint = torch.load(model_dir)
+        
         if device.type == "cpu":
             print("No Cuda available, load pretrained model to CPU")
-            #optimizer.load_state_dict(checkpoint['optimizer'], map_location='cpu')
-            #model.load_state_dict(checkpoint['state_dict'], map_location='cpu')
+            checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
             optimizer.load_state_dict(checkpoint['optimizer'])
             model.load_state_dict(checkpoint['state_dict'])
+            #optimizer.load_state_dict(checkpoint['optimizer'])
+            #model.load_state_dict(checkpoint['state_dict'])
         else:
             print("Load trained model to Cuda GPU")
+            checkpoint = torch.load(model_dir)
             optimizer.load_state_dict(checkpoint['optimizer'])
             model.load_state_dict(checkpoint['state_dict'])
 
@@ -112,7 +113,9 @@ def initialize_model(model, model_dir, device, start_beginning):
 def train(model):
     # Initialize model
     model, best_valid_loss = initialize_model(model, model_dir, device, start_beginning)
-    
+    # Scheduler reduces learning rate after every 5 epochs
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+
     for epoch_index in range(EPOCH_COUNT):
         total = len(train_loader.dataset)
         epoch_loss = []
@@ -126,7 +129,6 @@ def train(model):
             loss = loss_function(batch_prediction, target)
             loss.backward()
             optimizer.step()
-            
             batch_accuracy = []
 
             for i, prediction in enumerate(batch_prediction, 0):
@@ -142,6 +144,8 @@ def train(model):
                    100 * (batch_index + 1) / len(train_loader),),
                   end="\r", flush=True)
         
+        scheduler.step()
+
         # Print training acc and loss
         print('Epoch %d | training acc %.4f, loss %.4f ' %
               (epoch_index + 1,
@@ -166,6 +170,7 @@ def train(model):
             state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             torch.save(state, model_dir)
             print("New best model saved!")
+
 
 if __name__ == '__main__':
     train(model)
