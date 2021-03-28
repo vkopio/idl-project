@@ -53,7 +53,7 @@ def data_split(x, y, test_size=0.5, random_state=42):
 img = np.array(image_indices)
 lab = np.array(labels)
 
-X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.25)
+X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.2)
 
 X_test, X_val, y_test, y_val = data_split(X_test_val, y_test_val, test_size=0.5)
 
