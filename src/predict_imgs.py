@@ -21,28 +21,6 @@ labels_list = ["baby", "bird", "car", "clouds", "dog", "female", "flower", "male
 # Number of output classes
 CLASS_COUNT = 14
 
-# Image normalization
-class Normalize(object):
-    """Normalize a tensor image with mean and standard deviation.
-    Given mean: ``(M1,...,Mn)`` and std: ``(S1,..,Sn)`` for ``n`` channels, this transform
-    will normalize each channel of the input ``torch.*Tensor`` i.e.
-    ``input[channel] = (input[channel] - mean[channel]) / std[channel]``
-    Args:
-        mean (sequence): Sequence of means for each channel.
-        std (sequence): Sequence of standard deviations for each channel.
-    """
-    def __init__(self, mean, std):
-        self.mean = mean
-        self.std = std
-
-    def __call__(self, tensor):
-        """
-        Args:
-            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
-        Returns:
-            Tensor: Normalized Tensor image.
-        """
-        return F.normalize(tensor, self.mean, self.std)
 
 # The main
 if __name__ == "__main__":
@@ -51,20 +29,11 @@ if __name__ == "__main__":
 
     # Model to device
     model = CNN(CLASS_COUNT).to(device)
-    '''
-    # Load trained model weights
-    if device.type == "cpu":
-        print("No Cuda available, will use CPU")
-        model.load_state_dict(torch.load(weights_path, map_location="cpu"))
-    else:
-        print("Use Cuda GPU")
-        model.load_state_dict(torch.load(weights_path))
-    '''
-    # Load trained model weights
+
+    # Load trained model
     if device.type == "cpu":
         print("No Cuda available, will use CPU")
         checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
-        #model.load_state_dict(checkpoint['state_dict'], map_location="cpu")
         model.load_state_dict(checkpoint['state_dict'])
     else:
         print("Use Cuda GPU")
@@ -82,18 +51,16 @@ if __name__ == "__main__":
 
         # Read image
         im = Image.open(im_path).convert("RGB") 
-        im = torchvision.transforms.ToTensor()(im)
 
-        # Normalize image
-        normalize = Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-        im = normalize(im)
+        # To tensor and normalize
+        im = torchvision.transforms.ToTensor()(im)
+        im = transforms.Normalize(mean=0.5, std=0.5, inplace=True)(im)
 
         # Make prediction
         model.eval()
         with torch.no_grad():
             im = im.unsqueeze(0)
             prediction = model(im)
-
 
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
@@ -102,7 +69,7 @@ if __name__ == "__main__":
         print(im_name, ":", prediction)
 
         # Binarize prediction. Threshold needs tuning!
-        threshold = 0.155
+        threshold = 0.3
         prediction[prediction < threshold] = 0
         prediction[prediction >= threshold] = 1
 
