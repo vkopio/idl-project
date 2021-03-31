@@ -157,7 +157,6 @@ def train(model, best_valid_loss, optimizer):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             batch_prediction = model(data)
-            print(batch_prediction)
             loss = loss_function(batch_prediction, target)
             loss.backward()
             optimizer.step()
