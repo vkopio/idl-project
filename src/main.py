@@ -94,8 +94,7 @@ def initialize_model(model, model_dir, device, start_beginning):
             checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
             optimizer.load_state_dict(checkpoint['optimizer'])
             model.load_state_dict(checkpoint['state_dict'])
-            #optimizer.load_state_dict(checkpoint['optimizer'])
-            #model.load_state_dict(checkpoint['state_dict'])
+
         else:
             print("Load trained model to Cuda GPU")
             checkpoint = torch.load(model_dir)
@@ -126,6 +125,7 @@ def train(model):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             batch_prediction = model(data)
+            print(batch_prediction)
             loss = loss_function(batch_prediction, target)
             loss.backward()
             optimizer.step()
