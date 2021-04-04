@@ -99,18 +99,18 @@ def evaluate(model, iterator, criterion):
             epoch_acc.append(np.asarray(batch_accuracy).mean())
     return epoch_loss, epoch_acc
 
-# Works!
+
 def initialize_VGG16(model_dir, device, start_beginning):
     # Load the pretrained model from pytorch
     vgg16 = models.vgg16(pretrained=True)
     # Freeze training for all layers
     for param in vgg16.features.parameters():
         param.require_grad = False
-    # Newly created modules have require_grad=True by default
+    # Get number of in features in layer 6
     num_features = vgg16.classifier[6].in_features
-    # Get last layer
+    # Remove layer 6
     features = list(vgg16.classifier.children())[:-1] 
-    # Modify last layer to have 14 outputs
+    # Make new linear layer and define number of input and output parameters
     features.extend([nn.Linear(num_features, CLASS_COUNT)]) 
     # Add new last layer to model
     vgg16.classifier = nn.Sequential(*features) 
