@@ -49,12 +49,23 @@ def data_split(x, y, test_size=0.5, random_state=42):
 
         return X_train, X_test, y_train, y_test
 
-
+# Image and labels arrays
 img = np.array(image_indices)
 lab = np.array(labels)
 
-X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.2)
+# Get indices of unclass images
+y_rows, _ = lab.shape 
+remove_rows = []
+for row in range(0, y_rows):
+    if sum(lab[row]) == 0:
+        remove_rows.append(row)
 
+# Remove unclass images
+img = np.delete(img, remove_rows, 0)
+lab = np.delete(lab, remove_rows, 0)
+
+# Train, test, val split
+X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.2)
 X_test, X_val, y_test, y_val = data_split(X_test_val, y_test_val, test_size=0.5)
 
 transformers_train = [
