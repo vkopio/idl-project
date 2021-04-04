@@ -6,13 +6,12 @@ import torchvision
 from torchvision import transforms
 from torchvision.transforms import functional as F
 from itertools import compress
-
-# Import model
-from model import CNN
+import torchvision.models as models
+import torch.nn as nn
 
 # Define paths
 #weights_path = "trained_weights.pt" # Path to trained model weights
-model_dir = "trained_model.pth"
+model_dir = "trained_vgg16_model.pth"
 read_dir = Path("../data/predict_images") # Directory to predict
 
 # Labels list for printing
@@ -22,7 +21,7 @@ labels_list = ["baby", "bird", "car", "clouds", "dog", "female", "flower", "male
 CLASS_COUNT = 14
 
 # Thresholds to turn prediction to labels. NEEDS TUNING!!!
-thresholds = [0.007, 0.03, 0.02, 0.06, 0.03, 0.157, 0.05, 0.159, 0.04, 0.296, 0.169, 0.008, 0.02, 0.04]
+thresholds = [0.8, 0.8, 0.8, 0.8, 0.8, 0.31, 0.8, 0.31, 0.8, 0.60, 0.30, 0.8, 0.8, 0.8]
 
 # The main
 if __name__ == "__main__":
@@ -30,7 +29,16 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Model to device
-    model = CNN(CLASS_COUNT).to(device)
+    model = models.vgg16(pretrained=True)
+
+    # Newly created modules have require_grad=True by default
+    num_features = model.classifier[6].in_features
+    # Get last layer
+    features = list(model.classifier.children())[:-1]
+    # Modify last layer to have 14 outputs
+    features.extend([nn.Linear(num_features, CLASS_COUNT)])
+    # Add new last layer to model
+    model.classifier = nn.Sequential(*features)
 
     # Load trained model
     if device.type == "cpu":
@@ -52,18 +60,20 @@ if __name__ == "__main__":
         im_name = im_path.parts[-1]
 
         # Read image
-        im = Image.open(im_path).convert("RGB") 
+        im = Image.open(im_path).convert("RGB")
 
         # To tensor and normalize
-        im = torchvision.transforms.ToTensor()(im)
-        im = transforms.Normalize(mean=0.5, std=0.5, inplace=True)(im)
+        im = transforms.Resize(224)(im)
+        im = transforms.ToTensor()(im)
+        im = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), inplace=True)(im)
 
         # Make prediction
         model.eval()
         with torch.no_grad():
             im = im.unsqueeze(0)
             prediction = model(im)
-
+        # Run sigmoid to prediction
+        prediction = nn.functional.sigmoid(prediction)
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
 
@@ -74,7 +84,6 @@ if __name__ == "__main__":
         for i in range(0, 14):
             if prediction[i] >= thresholds[i]:
                 prediction[i] = 1
-                
             else:
                 prediction[i] = 0
 
