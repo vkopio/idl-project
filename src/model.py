@@ -33,5 +33,5 @@ class CNN(nn.Module):
         x = self.seq2(x)
         x = x.view(x.size(0), -1)
         x = self.seq3(x)
-        x = torch.sigmoid(x)
+        #x = torch.sigmoid(x)
         return x

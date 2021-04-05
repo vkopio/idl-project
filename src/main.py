@@ -1,10 +1,11 @@
+# Import libraries
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data as data
 from torchvision import transforms
 
-#from data_set import ImageDataSet
+# Import model and data_set
 from data_set import train_set, val_set, test_set
 from model import CNN
 
@@ -12,6 +13,7 @@ from model import CNN
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
+# Define parameters
 CLASS_COUNT = 14
 EPOCH_COUNT = 1
 BATCH_SIZE = 16
@@ -20,15 +22,20 @@ NUM_WORKERS = 10
 RANDOM_SEED = 42
 
 # Start training from beginning or continue with the trained model. True or False.
-start_beginning=False
+start_beginning=True
 
 # Define path to trained model
 model_dir = "trained_model.pth"
 
+# Get device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Get model
 model = CNN(CLASS_COUNT).to(device)
+
+# Define optimizer and loss_function ("criterion")
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=5e-5)
-loss_function = nn.BCELoss()
+loss_function = nn.BCEWithLogitsLoss(pos_weight=torch.ones([14]))
 
 # Train, val and test loaders
 train_loader = data.DataLoader(
@@ -52,6 +59,7 @@ test_loader = data.DataLoader(
     num_workers=NUM_WORKERS,
 )
 
+# Initialize model weights (used when start training from beginning)
 def init_weights(m):
     if isinstance(m, torch.nn.Conv2d):
         torch.nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
@@ -88,7 +96,6 @@ def initialize_model(model, model_dir, device, start_beginning):
     model = model.apply(init_weights)
     # Load trained model
     if start_beginning == False:
-        
         if device.type == "cpu":
             print("No Cuda available, load pretrained model to CPU")
             checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
