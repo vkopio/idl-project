@@ -33,9 +33,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Get model
 model = CNN(CLASS_COUNT).to(device)
 
-# Define optimizer and loss_function ("criterion")
+# Define optimizer and loss_function ("criterion"). Weights are defined to each class with formula: count_neg/count_pos.
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=5e-5)
-loss_function = nn.BCEWithLogitsLoss(pos_weight=torch.ones([14]))
+loss_function = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([209.5, 54.5, 61.7, 17.3, 43.6, 5.2, 25.3, 5.7, 32.4, 2.1, 5.4, 165.7, 114.6, 37.1]))
 
 # Train, val and test loaders
 train_loader = data.DataLoader(
