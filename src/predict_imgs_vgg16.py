@@ -8,20 +8,19 @@ from torchvision.transforms import functional as F
 from itertools import compress
 import torchvision.models as models
 import torch.nn as nn
+import pandas as pd
 
 # Define paths
-#weights_path = "trained_weights.pt" # Path to trained model weights
 model_dir = "trained_vgg16_model.pth"
-read_dir = Path("../data/predict_images") # Directory to predict
+read_dir = Path("../data/test_images") # Directory to predict
 
-# Labels list for printing
-labels_list = ["baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
+# Initialize results dataframe
+cols = ['im_name', "baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
+results = pd.DataFrame(columns=cols)
 
 # Number of output classes
 CLASS_COUNT = 14
 
-# Thresholds to turn prediction to labels. NEEDS TUNING!!!
-thresholds = [0.8, 0.8, 0.8, 0.8, 0.8, 0.31, 0.8, 0.31, 0.8, 0.60, 0.30, 0.8, 0.8, 0.8]
 
 # The main
 if __name__ == "__main__":
@@ -58,7 +57,7 @@ if __name__ == "__main__":
     for im_path in img_paths:
         # Image name for printing
         im_name = im_path.parts[-1]
-
+        print("Processing:", im_name)
         # Read image
         im = Image.open(im_path).convert("RGB")
 
@@ -73,25 +72,35 @@ if __name__ == "__main__":
             im = im.unsqueeze(0)
             prediction = model(im)
         # Run sigmoid to prediction
-        prediction = nn.functional.sigmoid(prediction)
+        prediction = torch.sigmoid(prediction)
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
+        
+        # Save results to dataframe
+        im_result = [im_name] + list(prediction)
+        df = pd.DataFrame(columns=cols)
+        df.loc[len(df)] = im_result
+        results = results.append(df, ignore_index=True)
 
-        # Print results with values
-        print(im_name, ":", prediction)
+    # Set imagename to index
+    results = results.set_index('im_name')
+    print(results)
 
-        # Binarize prediction. Threshold needs tuning!
-        for i in range(0, 14):
-            if prediction[i] >= thresholds[i]:
-                prediction[i] = 1
-            else:
-                prediction[i] = 0
+    # Thresholds to turn prediction to labels. NEEDS TUNING!!!
+    thresholds = [0.8, 0.8, 0.8, 0.8, 0.8, 0.30, 0.8, 0.297, 0.8, 0.64, 0.30, 0.8, 0.8, 0.8]
 
-        # Print result with names
-        labeled_prediction = list(compress(labels_list, prediction))
-        print(im_name, ":", labeled_prediction)
+    # Threshold the dataframe
+    for i, value in enumerate(thresholds):
+        results.iloc[:, i] = results.iloc[:, i] > value
 
-        '''
+    # Dataframe from boolean to binary
+    results = results.astype(int)
+    print(results)
+
+    # Save results
+    results.to_csv(r'prediction_results.csv', index=True)
+
+    '''
         Correct answers for im1-im9
         im_num,count,baby,bird,car,clouds,dog,female,flower,male,night,people,portrait,river,sea,tree
         im1,     3,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      1,      0,   0,  0
@@ -103,4 +112,4 @@ if __name__ == "__main__":
         im7,     2,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      0,      0,   0,  0
         im8,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
         im9,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
-        '''
+    '''
