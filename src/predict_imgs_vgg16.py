@@ -9,6 +9,7 @@ from itertools import compress
 import torchvision.models as models
 import torch.nn as nn
 import pandas as pd
+from tqdm import tqdm
 
 # Define paths
 model_dir = "trained_vgg16_model.pth"
@@ -54,10 +55,9 @@ if __name__ == "__main__":
     img_paths = sorted(img_paths)
 
     # Loop images and make predictions
-    for im_path in img_paths:
+    for im_path in tqdm(img_paths):
         # Image name for printing
         im_name = im_path.parts[-1]
-        print("Processing:", im_name)
         # Read image
         im = Image.open(im_path).convert("RGB")
 
@@ -84,6 +84,9 @@ if __name__ == "__main__":
 
     # Set imagename to index
     results = results.set_index('im_name')
+
+    # Save and print raw predictions
+    results.to_csv(r'prediction_results_raw.csv', index=True)
     print(results)
 
     # Thresholds to turn prediction to labels. NEEDS TUNING!!!
@@ -95,10 +98,11 @@ if __name__ == "__main__":
 
     # Dataframe from boolean to binary
     results = results.astype(int)
-    print(results)
+    
 
-    # Save results
+    # Save and print binarized predictions
     results.to_csv(r'prediction_results.csv', index=True)
+    print(results)
 
     '''
         Correct answers for im1-im9
