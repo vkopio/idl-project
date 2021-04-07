@@ -40,7 +40,7 @@ class ImageDataSet(Dataset):
         target = FloatTensor(self.labels[index])
         return tensor_image, target
 
-def data_split(x, y, test_size=0.5, random_state=42):
+def data_split(x, y, test_size=0.5, random_state=30):
     msss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=random_state)
 
     for train_index, test_index in msss.split(x, y):
@@ -65,13 +65,13 @@ for row in range(0, y_rows):
 img = np.delete(img, remove_rows, 0)
 lab = np.delete(lab, remove_rows, 0)
 
-X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.2)
+X_train, X_test_val, y_train, y_test_val = data_split(img, lab, test_size=0.8)
 
 X_test, X_val, y_test, y_val = data_split(X_test_val, y_test_val, test_size=0.5)
 
 transformers_train = [
     transforms.ToTensor(),
-    transforms.RandomHorizontalFlip(p=0.3),
+    transforms.RandomHorizontalFlip(),
     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
 ]
 
