@@ -85,7 +85,7 @@ if __name__ == "__main__":
     results = results.set_index('im_name')
 
     # Save and print raw predictions
-    results.to_csv(r'prediction_results_raw.csv', index=True)
+    results.to_csv(r'../data/prediction_results_raw.csv', index=True)
     print(results)
 
     # Thresholds to turn prediction to labels. NEEDS TUNING!!!
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     
 
     # Save and print binarized predictions
-    results.to_csv(r'prediction_results.csv', index=True)
+    results.to_csv(r'../data/prediction_results.csv', index=True)
     print(results)
 
     '''
