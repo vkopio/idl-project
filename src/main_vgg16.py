@@ -21,7 +21,7 @@ try:
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
-#from data_set import ImageDataSet
+
 from data_set import train_set, val_set, test_set
 
 plt.ion()  
@@ -35,25 +35,23 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # Initialize parameters
 CLASS_COUNT = 14
-EPOCH_COUNT = 1
-BATCH_SIZE = 16
-LEARNING_RATE = 0.01
+EPOCH_COUNT = 200
+BATCH_SIZE = 64
+LEARNING_RATE = 0.001
 NUM_WORKERS = 10
 RANDOM_SEED = 42
 
 # Start training from beginning or continue with the trained model. True or False.
-start_beginning=True
+start_beginning=False
 
 # Define path to trained model
 model_dir = "trained_vgg16_model.pth"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Adjust loss function weights!!
-if use_gpu:
-    loss_function = torch.nn.MultiLabelSoftMarginLoss(weight = torch.Tensor([1, 1,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1])).cuda()
-else:
-    loss_function = torch.nn.MultiLabelSoftMarginLoss(weight = torch.Tensor([1, 1,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1]))
-
+# Weights are defined to each class with formula: count_neg/count_pos.
+#loss_function = torch.nn.BCEWithLogitsLoss(pos_weight = torch.Tensor([210, 55,  62, 17, 44, 5, 25, 6, 32, 2, 5, 166, 115,  37])).cuda()
+loss_function = torch.nn.BCEWithLogitsLoss(pos_weight = torch.Tensor([10, 10,  10, 8, 10, 2, 10, 2, 10, 1, 2, 10, 10, 10])).cuda()
+#loss_function = torch.nn.BCEWithLogitsLoss(pos_weight = torch.Tensor([106, 27,  31, 8, 22, 2, 12, 2, 16, 0.6, 2, 83, 57, 18])).cuda()
 
 # Train, val and test loaders
 train_loader = data.DataLoader(
@@ -79,6 +77,8 @@ test_loader = data.DataLoader(
 
 
 def prediction_accuracy(original, predicted):
+    original = original.to("cpu")
+    predicted = predicted.to("cpu")
     return torch.round(predicted).eq(original).sum().numpy() / len(original)
 
 # Works!
@@ -90,6 +90,7 @@ def evaluate(model, iterator, criterion):
         for batch_index, (data, target) in enumerate(iterator):
             data, target = data.to(device), target.to(device)
             batch_prediction = model(data)
+           # batch_prediction = torch.sigmoid(batch_prediction)
             loss = criterion(batch_prediction, target)
             batch_accuracy = []
             for i, prediction in enumerate(batch_prediction, 0):
@@ -99,54 +100,55 @@ def evaluate(model, iterator, criterion):
             epoch_acc.append(np.asarray(batch_accuracy).mean())
     return epoch_loss, epoch_acc
 
-
+# Works!
 def initialize_VGG16(model_dir, device, start_beginning):
     # Load the pretrained model from pytorch
     vgg16 = models.vgg16(pretrained=True)
     # Freeze training for all layers
     for param in vgg16.features.parameters():
         param.require_grad = False
-    # Get number of in features in layer 6
+    # Newly created modules have require_grad=True by default
     num_features = vgg16.classifier[6].in_features
-    # Remove layer 6
+    # Get last layer
     features = list(vgg16.classifier.children())[:-1] 
-    # Make new linear layer and define number of input and output parameters
+    # Modify last layer to have 14 outputs
     features.extend([nn.Linear(num_features, CLASS_COUNT)]) 
     # Add new last layer to model
     vgg16.classifier = nn.Sequential(*features) 
     # Define optimizer
-    optimizer = optim.SGD(vgg16.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=0.0005)
+    optimizer = optim.SGD(vgg16.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=0.001)
+   # optimizer = optim.Adam(vgg16.parameters(), lr=LEARNING_RATE, weight_decay=0.005)
 
-    # Load trained model. KESKEN!!!
+    # Load trained model
     if start_beginning == False:
         if device.type == "cpu":
             print("No Cuda available, load pretrained model to CPU")
             checkpoint = torch.load(model_dir, map_location=torch.device('cpu'))
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            model.load_state_dict(checkpoint['state_dict'])
+           # optimizer.load_state_dict(checkpoint['optimizer'])
+            vgg16.load_state_dict(checkpoint['state_dict'])
         else:
             print("Load trained model to Cuda GPU")
             checkpoint = torch.load(model_dir)
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            model.load_state_dict(checkpoint['state_dict'])
+           # optimizer.load_state_dict(checkpoint['optimizer'])
+            vgg16.load_state_dict(checkpoint['state_dict'])
 
 
     # vgg16 to device
     vgg16 = vgg16.to(device)
     # Get starting validation accuracy and loss
     valid_loss, valid_acc = evaluate(vgg16, val_loader, loss_function)
+    validation_acc = np.asarray(valid_acc).mean()
     validation_loss = np.asarray(valid_loss).mean()
     print('Starting results | validation acc %.4f, loss %.4f ' %
-              (np.asarray(valid_acc).mean(),
-               validation_loss))
+              (validation_acc, validation_loss))
     # Return model and initial best valid loss
-    return vgg16, valid_loss, optimizer
+    return vgg16, validation_acc, validation_loss, optimizer
 
 
-def train(model, best_valid_loss, optimizer):
+def train(model, best_valid_acc, best_valid_loss, optimizer):
     # Scheduler reduces learning rate after every 5 epochs
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-
+    best_valid_loss = 100
     for epoch_index in range(EPOCH_COUNT):
         total = len(train_loader.dataset)
         epoch_loss = []
@@ -157,6 +159,7 @@ def train(model, best_valid_loss, optimizer):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             batch_prediction = model(data)
+            #batch_prediction = nn.functional.sigmoid(batch_prediction)
             loss = loss_function(batch_prediction, target)
             loss.backward()
             optimizer.step()
@@ -191,7 +194,7 @@ def train(model, best_valid_loss, optimizer):
 
         # Save model if validation accuracy is better than best known one
         valid_loss = np.asarray(valid_loss).mean()
-        if valid_loss < best_valid_loss:
+        if valid_loss <= best_valid_loss:
             best_valid_loss = valid_loss
             test_loss, test_acc = evaluate(model, test_loader, loss_function)
             print("New best result | Test accuracy: %.4f | Test loss %.4f" %
@@ -204,9 +207,9 @@ def train(model, best_valid_loss, optimizer):
 
 if __name__ == '__main__':
     # Initialize model
-    model, best_valid_loss, optimizer = initialize_VGG16(model_dir, device, start_beginning)
+    model, best_valid_acc, best_valid_loss, optimizer = initialize_VGG16(model_dir, device, start_beginning)
 
     # Train model
-    train(model, best_valid_loss, optimizer)
+    train(model, best_valid_acc, best_valid_loss, optimizer)
 
     print("ok")
