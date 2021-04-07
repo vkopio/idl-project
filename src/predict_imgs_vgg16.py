@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 # Define paths
 model_dir = "trained_vgg16_model.pth"
-read_dir = Path("../data/test_images") # Directory to predict
+read_dir = Path("../data/predict_images") # Directory to predict
 
 # Initialize results dataframe
 cols = ['im_name', "baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
@@ -62,7 +62,6 @@ if __name__ == "__main__":
         im = Image.open(im_path).convert("RGB")
 
         # To tensor and normalize
-        im = transforms.Resize(224)(im)
         im = transforms.ToTensor()(im)
         im = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), inplace=True)(im)
 
@@ -112,8 +111,4 @@ if __name__ == "__main__":
         im3,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
         im4,     2,   0,    0,  0,   0,    0,   0,     0,    1,    0,    1,      0,      0,   0,  0
         im5,     2,   0,    0,  0,   0,    0,   0,     0,    1,    0,    1,      0,      0,   0,  0
-        im6,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
-        im7,     2,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      0,      0,   0,  0
-        im8,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
-        im9,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
     '''

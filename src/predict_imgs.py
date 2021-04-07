@@ -6,6 +6,9 @@ import torchvision
 from torchvision import transforms
 from torchvision.transforms import functional as F
 from itertools import compress
+import torch.nn as nn
+import pandas as pd
+from tqdm import tqdm
 
 # Import model
 from model import CNN
@@ -15,14 +18,12 @@ from model import CNN
 model_dir = "trained_model.pth"
 read_dir = Path("../data/predict_images") # Directory to predict
 
-# Labels list for printing
-labels_list = ["baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
+# Initialize results dataframe
+cols = ['im_name', "baby", "bird", "car", "clouds", "dog", "female", "flower", "male", "night", "people", "portrait", "river", "sea", "tree"]
+results = pd.DataFrame(columns=cols)
 
 # Number of output classes
 CLASS_COUNT = 14
-
-# Thresholds to turn prediction to labels. NEEDS TUNING!!!
-thresholds = [0.007, 0.03, 0.02, 0.06, 0.03, 0.157, 0.05, 0.159, 0.04, 0.296, 0.169, 0.008, 0.02, 0.04]
 
 # The main
 if __name__ == "__main__":
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     img_paths = sorted(img_paths)
 
     # Loop images and make predictions
-    for im_path in img_paths:
+    for im_path in tqdm(img_paths):
         # Image name for printing
         im_name = im_path.parts[-1]
 
@@ -64,25 +65,41 @@ if __name__ == "__main__":
             im = im.unsqueeze(0)
             prediction = model(im)
 
+        # Run sigmoid to prediction
+        prediction = torch.sigmoid(prediction)
+
         # Prediction tensor to list
         prediction = prediction.numpy()[0]
 
-        # Print results with values
-        print(im_name, ":", prediction)
+        # Save results to dataframe
+        im_result = [im_name] + list(prediction)
+        df = pd.DataFrame(columns=cols)
+        df.loc[len(df)] = im_result
+        results = results.append(df, ignore_index=True)
 
-        # Binarize prediction. Threshold needs tuning!
-        for i in range(0, 14):
-            if prediction[i] >= thresholds[i]:
-                prediction[i] = 1
-                
-            else:
-                prediction[i] = 0
+    # Set imagename to index
+    results = results.set_index('im_name')
 
-        # Print result with names
-        labeled_prediction = list(compress(labels_list, prediction))
-        print(im_name, ":", labeled_prediction)
+    # Save and print raw predictions
+    results.to_csv(r'prediction_results_raw.csv', index=True)
+    print(results)
 
-        '''
+    # Thresholds to turn prediction to labels. NEEDS TUNING!!!
+    thresholds = [0.8, 0.8, 0.8, 0.8, 0.8, 0.30, 0.8, 0.297, 0.8, 0.64, 0.30, 0.8, 0.8, 0.8]
+
+    # Threshold the dataframe
+    for i, value in enumerate(thresholds):
+        results.iloc[:, i] = results.iloc[:, i] > value
+
+    # Dataframe from boolean to binary
+    results = results.astype(int)
+    
+
+    # Save and print binarized predictions
+    results.to_csv(r'prediction_results.csv', index=True)
+    print(results)
+
+    '''
         Correct answers for im1-im9
         im_num,count,baby,bird,car,clouds,dog,female,flower,male,night,people,portrait,river,sea,tree
         im1,     3,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      1,      0,   0,  0
@@ -94,4 +111,4 @@ if __name__ == "__main__":
         im7,     2,   0,    0,  0,   0,    0,   1,     0,    0,    0,    1,      0,      0,   0,  0
         im8,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
         im9,     0,   0,    0,  0,   0,    0,   0,     0,    0,    0,    0,      0,      0,   0,  0
-        '''
+    '''
